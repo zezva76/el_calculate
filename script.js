@@ -131,9 +131,15 @@ function drawChartWithAxes(labels, data, colors){
     const padding = 60;
     const chartWidth = canvas.width - padding*2;
     const chartHeight = canvas.height - padding*2;
+
+    // X ღერძი: სიმძლავრე W
+    const powerValues = segments.map(seg=>parseFloat(seg.querySelector(".power").value) || 0);
+    const maxPower = Math.max(...powerValues)*1.2 || 1000;
+
+    // Y ღერძი: პროცენტული დანაკარგი
     const maxPercent = Math.max(...data)*1.2 || 5;
 
-    // ღერძები X/Y
+    // ღერძები
     ctx.beginPath();
     ctx.moveTo(padding, padding);
     ctx.lineTo(padding, canvas.height-padding);
@@ -142,13 +148,15 @@ function drawChartWithAxes(labels, data, colors){
     ctx.lineWidth=2;
     ctx.stroke();
 
-    // Y ღერძის ნიშნები
+    // Y ღერძის ნიშნები (პროცენტული დანაკარგი)
     ctx.fillStyle="#000";
     ctx.textAlign="right";
     ctx.textBaseline="middle";
-    for(let y=0; y<=maxPercent; y+=3){
+    const yStep = Math.ceil(maxPercent/5); // 5 ნიშნამდე
+    for(let y=0; y<=maxPercent; y+=yStep){
         const yPos = canvas.height-padding - (y/maxPercent)*chartHeight;
         ctx.fillText(y+"%", padding-5, yPos);
+
         ctx.beginPath();
         ctx.moveTo(padding, yPos);
         ctx.lineTo(canvas.width-padding, yPos);
@@ -157,22 +165,30 @@ function drawChartWithAxes(labels, data, colors){
         ctx.stroke();
     }
 
-    // X ღერძის ნიშნები
+    // X ღერძის ნიშნები (სიმძლავრე W)
     ctx.textAlign="center";
     ctx.textBaseline="top";
-    labels.forEach((label,i)=>{
-        const x = padding + (i/(labels.length-1 || 1))*chartWidth;
+    const xStep = Math.ceil(maxPower/5);
+    for(let xVal=0; xVal<=maxPower; xVal+=xStep){
+        const x = padding + (xVal/maxPower)*chartWidth;
         ctx.fillStyle="#000";
-        ctx.fillText(label, x, canvas.height-padding+5);
-    });
+        ctx.fillText(xVal+" W", x, canvas.height-padding+5);
+
+        ctx.beginPath();
+        ctx.moveTo(x, padding);
+        ctx.lineTo(x, canvas.height-padding);
+        ctx.strokeStyle="#eee";
+        ctx.lineWidth=1;
+        ctx.stroke();
+    }
 
     // წერტილები
     const points = [];
-    data.forEach((val,i)=>{
-        const x = padding + (i/(data.length-1 || 1))*chartWidth;
-        const y = canvas.height-padding - (val/maxPercent)*chartHeight;
-        points.push({x,y,val,i});
-        ctx.fillStyle = colors[i];
+    data.forEach((percent,i)=>{
+        const x = padding + (powerValues[i]/maxPower)*chartWidth;
+        const y = canvas.height-padding - (percent/maxPercent)*chartHeight;
+        points.push({x,y,val:percent,i});
+        ctx.fillStyle = colors[i]; // მწვანე/წითელი
         ctx.beginPath();
         ctx.arc(x,y,10,0,2*Math.PI);
         ctx.fill();
@@ -191,7 +207,14 @@ function drawChartWithAxes(labels, data, colors){
                 tooltip.style.display="block";
                 tooltip.style.left = (e.clientX+15)+"px";
                 tooltip.style.top = (e.clientY+15)+"px";
-                tooltip.innerHTML = `${labels[pt.i]}<br>ძაბვის ვარდნა: ${pt.val}%<br>კვეთა: ${seg.querySelector(".cableSize").value} mm²<br>სიგრძე: ${seg.querySelector(".length").value} მ<br>უსაფრთხოება: ${pt.val<=3 ? "✅" : "❌"}`;
+                tooltip.innerHTML = `
+                    სეგმენტი ${pt.i+1}<br>
+                    სიმძლავრე: ${seg.querySelector(".power").value} W<br>
+                    ძაბვის ვარდნა: ${pt.val}%<br>
+                    კვეთა: ${seg.querySelector(".cableSize").value} mm²<br>
+                    სიგრძე: ${seg.querySelector(".length").value} მ<br>
+                    უსაფრთხოება: ${pt.val<=3 ? "✅" : "❌"}
+                `;
                 found = true;
             }
         });
